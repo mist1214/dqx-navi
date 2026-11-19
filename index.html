@@ -40,6 +40,10 @@
     </style>
 </head>
 <body>
+    <div id="liveBanner" style="display:none;align-items:center;gap:8px;background:#c81e1e;color:#fff;padding:8px 12px;font-size:13px;font-weight:bold;">
+      <a id="liveBannerLink" href="#" target="_blank" rel="noopener" style="color:#fff;text-decoration:none;flex:1;line-height:1.4;"></a>
+      <button id="liveBannerClose" aria-label="閉じる" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:14px;font-weight:bold;border-radius:6px;padding:2px 9px;cursor:pointer;flex:none;">×</button>
+    </div>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -677,7 +681,7 @@
 
                     <footer className="text-center text-xs text-gray-500 mt-10 leading-relaxed">
                         <p>※本ツールは非公式のファンメイドツールです。「ドラゴンクエストX」および関連する名称・情報の権利は株式会社スクウェア・エニックスに帰属します。</p>
-                        <p className="mt-1">進捗データはお使いのブラウザ内にのみ保存されます（サーバーには送信されません）。</p>
+                        <p className="mt-1">進捗データはお使いのブラウザ内にのみ保存されます。なお、利用状況の把握のため、Googleアナリティクスによるアクセス解析を行っています。</p>
                     </footer>
 
                     {/* アクセ詳細モーダル */}
@@ -736,6 +740,38 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    <script>
+      // 配信のお知らせバー（×で消すと、そのお知らせについては再表示しない）
+      (function () {
+        var STORE_KEY = 'mist_live_banner_dismissed';
+        fetch('https://flat-cake-9635mist-live-check.mist12141208-ec9.workers.dev/')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d) return;
+            var text, key;
+            if (d.live) {
+              text = '🔴 現在開発者がYouTubeでライブ配信中です！応援よろしくお願いいたします！';
+              key = 'live:' + (d.videoId || '');
+            } else if (d.lastLiveDate) {
+              text = '📺 ' + d.lastLiveDate + 'に開発者がライブ配信をしてました！チャンネル登録をして待っててね！';
+              key = 'last:' + d.lastLiveDate;
+            } else {
+              return;
+            }
+            try { if (localStorage.getItem(STORE_KEY) === key) return; } catch (e) {}
+            var bar = document.getElementById('liveBanner');
+            var link = document.getElementById('liveBannerLink');
+            link.textContent = text;
+            link.href = d.url;
+            bar.style.display = 'flex';
+            document.getElementById('liveBannerClose').onclick = function () {
+              bar.style.display = 'none';
+              try { localStorage.setItem(STORE_KEY, key); } catch (e) {}
+            };
+          })
+          .catch(function () {});
+      })();
     </script>
 </body>
 </html>
