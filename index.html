@@ -751,10 +751,10 @@
             if (!d) return;
             var text, key;
             if (d.live) {
-              text = '🔴 現在開発者がYouTubeでライブ配信中です！応援よろしくお願いいたします！';
+              text = d.message || '🔴 現在開発者がYouTubeでライブ配信中です！応援よろしくお願いいたします！';
               key = 'live:' + (d.videoId || '');
             } else if (d.lastLiveDate) {
-              text = '📺 ' + d.lastLiveDate + 'に開発者がライブ配信をしてました！チャンネル登録をして待っててね！';
+              text = d.message || ('📺 開発者の最新動画は' + d.lastLiveDate + 'に公開されました！チャンネル登録をして待っててね！');
               key = 'last:' + d.lastLiveDate;
             } else {
               return;
