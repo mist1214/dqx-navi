@@ -47,7 +47,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useLayoutEffect, useRef } = React;
 
         // ▼ タスク定義（詳細解説付き） ▼
         const tasks = [
@@ -64,7 +64,7 @@
             { 
                 id: "daily3", type: "daily", name: "強戦士の書（オーブ金策）", ver: "2.1",
                 place: "『だいじなもの』の強戦士の書（町の中でのみ開ける）※入手は港町レンドア北・選定者ワルキュウリのクエスト331", 
-                desc: "過去に戦ったボスの強化版（強ボス）に再挑戦できます。各ボス1日1回、勝利時の紫宝箱で「オーブ」が手に入り、旅人バザーで売却して安定した金策になります。"
+                desc: "過去に戦ったボスの強化版（強ボス）に再挑戦できます。各ボス1日1回、勝利時の紫宝箱で「オーブ」が手に入り、旅人バザーで売却して安定した金策になります。（Ver8.1〜）倒した後は元の世界に戻らず、そのまま次のボスに挑めます（ソロプレイ時のみ）。"
             },
             { 
                 id: "daily4", type: "daily", name: "深淵の咎人たち（紫箱）", ver: "6.0",
@@ -75,7 +75,7 @@
             { 
                 id: "weekly1", type: "weekly", name: "週替わり討伐クエスト", ver: "2.0",
                 place: "偽グランゼドーラ王国の討伐隊員ライヴァス／真グランゼドーラ王国（城下町入口）の討伐隊員ロナール", 
-                desc: "毎週日曜朝6時に更新される討伐クエスト。偽と真の両方で週1回ずつ受注できます。報告すると討伐ポイントと同額の経験値（Ver8.1以降は15万Pの強ボス依頼が必ず出て、最大17万Pの依頼も）と、最新の錬金石10個がもらえます。"
+                desc: "毎週日曜朝6時に更新される討伐クエスト。偽と真の両方で週1回ずつ受注できます。報告すると討伐ポイントと同額の経験値（Ver8.1以降は強ボス依頼のポイントが15万P以上にアップ）と、最新の錬金石10個がもらえます。"
             },
             { 
                 id: "weekly2", type: "weekly", name: "ピラミッドの秘宝", ver: "2.1",
@@ -160,7 +160,9 @@
             ] },
             { part: "こころ", routes: [
                 ["まもののこころの結晶", "まもののこころ"],
-                ["エステラ / ハクオウ / ユーライザのこころ"]
+                ["まもののこころの結晶2"],
+                ["異界のなかまのこころ（全17人）"],
+                ["ガナサダイのこころ"]
             ]}
         ];
 
@@ -230,14 +232,193 @@
             "邪教司祭の勲章": { boss: "エビルプリースト", res: "呪文耐性(盾,体上)、呪い(頭,体上,盾)、転び(足)" },
             
             "まもののこころの結晶": { boss: "Ver8.0コンテンツ「まもの博士の冒険的な実験」のソロバトル週1回報酬", res: "特になし（6個集めると「まもののこころ」と交換できる）" },
-            "まもののこころ": { boss: "「まもの博士の冒険的な実験」で、まもののこころの結晶6個、または同盟バトル報酬「モンスターハート」1個と交換（ラボ内の交換屋）", res: "特になし（交換で入手する「こころ2」枠アクセ）" },
-            "エステラ / ハクオウ / ユーライザのこころ": { boss: "異界アスタルジア：集めた「こころの結晶」を仲間に渡すと、その仲間のこころがもらえる", res: "耐性ではなく、こころ自体の効果が仲間ごとに違う（例：エステラは攻撃魔力+30など）" }
+            "まもののこころの結晶2": { boss: "Ver8.1コンテンツ「まもの博士の冒険的な実験」の週課ボス「メタルスライダーク」の報酬", res: "特になし（6個、またはモンスターハート1個で、Ver8.1の新しい「まもののこころ」5種：スライムナイト／さまようよろい／フォンデュ／パペットマン／エンタシスマンと交換できる。旧「結晶」では新心と交換できない）" },
+            "まもののこころ": { boss: "「まもの博士の冒険的な実験」で、まもののこころの結晶6個（Ver8.0の心）、まもののこころの結晶2 6個（Ver8.1の新心5種）、または同盟バトル報酬「モンスターハート」1個と交換（ラボ内の交換屋）", res: "特になし（交換で入手する「こころ2」枠アクセ）" },
+            "異界のなかまのこころ（全17人）": { boss: "異界アスタルジア：集めた「こころの結晶」を仲間に渡すと、その仲間のこころがもらえる", res: "耐性ではなく、こころ自体の効果が仲間ごとに違う（例：エステラは攻撃魔力+30など）" },
+            "ガナサダイのこころ": { boss: "異界アスタルジアの難関ボス「異界の創造主」暗黒皇帝ガナサダイの討伐報酬（月2回程度の不定期出現）", res: "特になし（2枠目「まもののこころ」枠に装備するこころ）" }
         };
 
 
+        // ▼ カスタマイズ機能 v1：追加コンテンツのライブラリ（調査レポート 2026-11-22 §2.2） ▼
+        // ON にした項目は data.customTasks に origin:"library" としてコピーされ、キャラごとに表示される。
+        const LIBRARY_TASKS = [
+            { id: "lib-weekly-bootcamp", type: "weekly", name: "ヴァリーブートキャンプ", ver: "6.4", place: "ヴァリーブートキャンプ", desc: "毎週日曜6時にウィークリーミッションが更新。達成で経験値＋ふくびき券。ボスは1週間ごとにローテーション。" },
+            { id: "lib-weekly-astalgia", type: "weekly", name: "異界アスタルジア（通常探索）", ver: "7.0", place: "異界アスタルジア（通常探索）", desc: "週1回、最深部ボス討伐で「こころの結晶」90個。結晶を仲間に渡すと「こころ」（召喚アクセサリー）を入手・強化できる。" },
+            { id: "lib-weekly-hakase", type: "weekly", name: "まもの博士の冒険的な実験（ソロバトル）", ver: "8.0", place: "まもの博士の冒険的な実験（ソロバトル）", desc: "週1回、ソロバトルの紫宝箱から「まもののこころの結晶」1個。結晶6個で「まもののこころ」（こころ2枠アクセサリー）と交換できる。" },
+            { id: "lib-weekly-episode", type: "weekly", name: "エピソード依頼帳", ver: "未確認", place: "『だいじなもの』のエピソード依頼帳", desc: "毎週日曜に5つのお題が更新。黒の上錬金石やスペシャルふくびき券、玉手箱などがもらえる。" },
+            { id: "lib-weekly-trainee", type: "weekly", name: "トレーニー育成帳", ver: "未確認", place: "『だいじなもの』のトレーニー育成帳", desc: "毎週日曜に5つのミッションが更新。黒の上錬金石やスペシャルふくびき券、戦神の箱などがもらえる。" },
+            { id: "lib-weekly-tatsujin", type: "weekly", name: "達人クエスト", ver: "未確認", place: "各お題の対象コンテンツ（お題ごとに異なる）", desc: "毎週日曜6時更新。5つのお題から1つ選び、選んだ属性の宝珠を最大5個入手。報酬は週1回のみ。" },
+            { id: "lib-biweekly-lemon", type: "biweeklyA", name: "レモンスライムクイズ", ver: "2.4", place: "レモンハルトの挑戦（レモンスライムクイズ）", desc: "毎月1日と15日6時に更新。ふくびき券5枚＋経験値（上級は100,000Pまたは特訓50P）。" },
+            { id: "lib-monthly-tatsujin", type: "monthly", name: "達人ポイント交換（ふくびき券100枚）", ver: "未確認", place: "達人ポイントの交換（ゲーム内）", desc: "達人ポイント100Pをふくびき券100枚と交換できる枠が毎月リセットされる。" },
+            { id: "lib-monthly-arena", type: "monthly", name: "異界の闘技場", ver: "未確認", place: "異界アスタルジア（異界の闘技場）", desc: "毎月1日に調査課題（お題）と報酬が更新。天啓の石40個＋こころの結晶100個などがもらえる。" },
+            { id: "lib-monthly-ten", type: "monthly10", name: "テンの日", ver: "未確認", place: "各地のクーちゃん／魔法の迷宮のプーちゃん／新エテーネ村のハナちゃん など", desc: "毎月10日朝6時から翌朝5:59まで。クーちゃんのプレゼントチケット、プーちゃんの運命のカード、福の神カードなどがもらえる。" },
+            { id: "lib-monthly-hakase", type: "manual", name: "まもの博士の冒険的な実験（同盟バトル）", ver: "8.0", place: "まもの博士の冒険的な実験（同盟バトル）", desc: "毎月20日〜26日の1週間限定開催。報酬「モンスターハート」1個で「まもののこころ」と交換できる。" },
+            { id: "lib-special-konmei", type: "manual", name: "昏冥庫パニガルム", ver: "7.1", place: "源世庫パニガルム内（天星郷フォーリオン外郭G-5の源世植物研究所）", desc: "源世庫パニガルム内の期間限定ボス戦。開催期間ごとの初回討伐で創生珠30個＋昏冥晶20個。" },
+            { id: "lib-special-tengoku", type: "manual", name: "天獄（邪神の宮殿）", ver: "未確認", place: "オーグリード大陸・ランドン山脈山頂付近E-7の邪神の宮殿", desc: "1〜4獄の討伐数が一定に達すると開門し、72時間だけ挑戦できる。初回で戦神のベルト+5。開門時刻はゲーム内要因のためタイマー表示不可。" },
+            { id: "lib-special-inferno", type: "manual", name: "フェスタ・インフェルノ", ver: "未確認", place: "不定期開催（開催時のゲーム内告知を確認）", desc: "月に3回程度、不定期に開催。開催ごとの初回討伐時に紫宝箱からボス素材1個確定。" },
+            { id: "lib-special-creator", type: "manual", name: "異界の創造主", ver: "未確認", place: "異界アスタルジア（異界の創造主）", desc: "月2回程度の不定期出現。ガナサダイのこころ、天啓の石8個、こころの結晶20個などがもらえる。" }
+        ];
+
+        // ▼ カスタマイズ機能 v1：共通ヘルパー ▼
+        const CUSTOM_TASK_TYPES = ["daily", "weekly", "biweeklyA", "biweeklyB", "monthly", "monthly10", "manual"];
+        const CUSTOM_TASK_LIMIT = 20; // 自由入力カスタムタスク（origin:"custom"）の上限件数
+
+        // そのキャラにカスタムタスクが表示されるか（enabledFor: "all" またはキャラIDの配列）
+        const isTaskEnabledFor = (def, charId, isNewChar) => {
+            if (!def) return false;
+            if (def.enabledFor === "all") {
+                if (isNewChar && def.applyToNewChars === false) return false;
+                return true;
+            }
+            return Array.isArray(def.enabledFor) && def.enabledFor.indexOf(charId) >= 0;
+        };
+
+        // そのキャラに表示される全タスク（デフォルト12件＋有効なカスタムタスク）
+        const visibleTasksFor = (dataObj, char) => {
+            const customs = (dataObj && Array.isArray(dataObj.customTasks)) ? dataObj.customTasks : [];
+            return tasks.concat(customs.filter(def => isTaskEnabledFor(def, char.id, false)));
+        };
+
+        // 自動リセットの対象タイプを動的に求める（manual は常に対象外）
+        const getAutoResetTypes = (dataObj) => {
+            const types = ["daily", "weekly", "biweeklyA", "biweeklyB"];
+            const customs = (dataObj && Array.isArray(dataObj.customTasks)) ? dataObj.customTasks : [];
+            customs.forEach(def => {
+                if (def && def.type !== "manual" && CUSTOM_TASK_TYPES.indexOf(def.type) >= 0 && types.indexOf(def.type) < 0) types.push(def.type);
+            });
+            return types;
+        };
+
+        // data の正規化：customTasks の補完・検証と、enabledFor に残った存在しないキャラIDの掃除。
+        // id/name/type が欠けた要素や未知の type は除外し、全体の読み込み・復元を止めない。
+        const normalizeCustomData = (dataObj) => {
+            if (!dataObj || typeof dataObj !== "object") return dataObj;
+            if (!Array.isArray(dataObj.customTasks)) dataObj.customTasks = [];
+            const charIds = (dataObj.characters || []).map(c => c.id);
+            const seen = {};
+            dataObj.customTasks = dataObj.customTasks.filter(def => {
+                if (!def || typeof def !== "object") return false;
+                if (!def.id || !def.name || CUSTOM_TASK_TYPES.indexOf(def.type) < 0) return false;
+                if (seen[def.id]) return false;
+                seen[def.id] = true;
+                // ライブラリ由来の定義は、ライブラリ側の最新情報（名称・種別・説明文）に追随させる（enabledFor 等のユーザー設定は保持する）
+                if (def.origin === "library") {
+                    const lib = LIBRARY_TASKS.find(l => l.id === def.id);
+                    if (lib) { def.name = lib.name; def.type = lib.type; def.ver = lib.ver; def.place = lib.place; def.desc = lib.desc; }
+                }
+                if (def.enabledFor !== "all") {
+                    const arr = Array.isArray(def.enabledFor) ? def.enabledFor : [];
+                    def.enabledFor = arr.filter(id => charIds.indexOf(id) >= 0);
+                }
+                return true;
+            });
+            return dataObj;
+        };
+
+        // ▼ カスタマイズ機能：一括追加・一括削除（純粋関数。入力は書き換えず deep copy した新しい data を返す） ▼
+        // 一括追加：ライブラリ全件に、単品の applyScope と同じ意味の反映範囲をまとめて適用する。
+        // mode "all"    → 全件 enabledFor:"all" かつ applyToNewChars:true
+        // mode "active" → 各定義に現在キャラを追加（既に "all" の定義は "all" のまま）
+        // mode "select" → 各定義の enabledFor を選択キャラ集合に置き換え
+        // 未追加の項目は定義を作成してから適用する。表示対象が0人になったライブラリ項目は定義ごと取り除く（単品仕様と同じ）。
+        const bulkAddLibrary = (dataObj, mode, activeCharId, selectedIds) => {
+            const data = JSON.parse(JSON.stringify(dataObj));
+            if (!Array.isArray(data.customTasks)) data.customTasks = [];
+            const charIds = (data.characters || []).map(c => c.id);
+            const sel = (Array.isArray(selectedIds) ? selectedIds : []).filter(id => charIds.indexOf(id) >= 0);
+            LIBRARY_TASKS.forEach(lib => {
+                let def = data.customTasks.find(d => d.id === lib.id);
+                if (!def) {
+                    def = { id: lib.id, name: lib.name, type: lib.type, ver: lib.ver, place: lib.place, desc: lib.desc, origin: "library", enabledFor: [], applyToNewChars: true };
+                    data.customTasks.push(def);
+                }
+                if (mode === "all") {
+                    def.enabledFor = "all";
+                    def.applyToNewChars = true;
+                } else if (mode === "active") {
+                    if (def.enabledFor !== "all") {
+                        const ids = Array.isArray(def.enabledFor) ? def.enabledFor.slice() : [];
+                        if (ids.indexOf(activeCharId) < 0) ids.push(activeCharId);
+                        def.enabledFor = ids;
+                        def.applyToNewChars = false;
+                    }
+                } else { // select
+                    def.enabledFor = sel.slice();
+                    def.applyToNewChars = false;
+                }
+                if (Array.isArray(def.enabledFor) && def.enabledFor.length === 0) {
+                    data.customTasks = data.customTasks.filter(d => d.id !== def.id);
+                }
+            });
+            return data;
+        };
+
+        // 一括削除：全定義（ライブラリ＋自由入力）を対象にする。
+        // mode "active"（このキャラから外す）/ "select"（選択キャラから外す）→ turnOffTask と同じ意味を対象キャラ集合へ適用し、チェック状態（char.tasks）には触れない。
+        //   enabledFor "all" は対象外キャラの配列に変換し applyToNewChars:false、配列は対象キャラを除外。
+        //   ライブラリ定義は対象が0人になったら定義ごと除去、自由入力の定義は残す（既存仕様どおり）。
+        // mode "all"（全キャラから完全に削除）→ 全定義を削除し、deleteCustomTask と同じ後始末（全キャラの review.items / uncompleted から除去）。
+        const bulkRemoveContent = (dataObj, mode, activeCharId, selectedIds) => {
+            const data = JSON.parse(JSON.stringify(dataObj));
+            if (!Array.isArray(data.customTasks)) data.customTasks = [];
+            const charIds = (data.characters || []).map(c => c.id);
+            if (mode === "all") {
+                const removedIds = data.customTasks.map(d => d.id);
+                data.customTasks = [];
+                data.characters.forEach(c => {
+                    if (c.review && Array.isArray(c.review.items)) {
+                        c.review = Object.assign({}, c.review, { items: c.review.items.filter(i => removedIds.indexOf(i.id) < 0) });
+                    }
+                    if (Array.isArray(c.uncompleted)) c.uncompleted = c.uncompleted.filter(i => removedIds.indexOf(i.id) < 0);
+                });
+                return data;
+            }
+            const targets = mode === "active" ? [activeCharId] : (Array.isArray(selectedIds) ? selectedIds : []).filter(id => charIds.indexOf(id) >= 0);
+            data.customTasks = data.customTasks.filter(def => {
+                if (def.enabledFor === "all") {
+                    def.enabledFor = charIds.filter(id => targets.indexOf(id) < 0);
+                    def.applyToNewChars = false;
+                } else if (Array.isArray(def.enabledFor)) {
+                    def.enabledFor = def.enabledFor.filter(id => targets.indexOf(id) < 0);
+                }
+                if (def.origin === "library" && Array.isArray(def.enabledFor) && def.enabledFor.length === 0) return false;
+                return true;
+            });
+            return data;
+        };
+
+        // ▼ セクション配置の最適化（メイソンリー配置） ▼
+        // 画面幅からタスクセクションの列数を決める（Tailwind の md=768 / xl=1280 と一致）。
+        const sectionColumnCountForWidth = (width) => (width >= 1280 ? 3 : width >= 768 ? 2 : 1);
+
+        // items: [{ type, height }]（元の表示順）。高さ降順にソートし、現在の合計高さが最小の列へ順に割り当てる（貪欲法、同点は左の列を優先）。
+        // 列内は元の表示順に並べ直し、列の並び自体も「列内で最も早い元の順序」で並べ替える（高さ合計は変わらないのでバランスは維持される）。戻り値: 列ごとの type 配列。
+        const distributeSections = (items, columnCount) => {
+            const cols = Math.max(1, Math.floor(columnCount) || 1);
+            const columns = [];
+            const totals = [];
+            for (let i = 0; i < cols; i++) { columns.push([]); totals.push(0); }
+            const indexed = (items || []).map((item, idx) => ({ type: item.type, height: Math.max(0, (item && item.height) || 0), order: idx }));
+            const sorted = indexed.slice().sort((a, b) => (b.height - a.height) || (a.order - b.order));
+            sorted.forEach(item => {
+                let target = 0;
+                for (let i = 1; i < cols; i++) if (totals[i] < totals[target]) target = i;
+                columns[target].push(item);
+                totals[target] += item.height;
+            });
+            const arranged = columns.map(col => col.slice().sort((a, b) => a.order - b.order));
+            // 列の並びは「その列で最も早い元のセクション順」で決める（日課のある列が左に来る等、左から自然に読める並びにする）。空列は最後。
+            arranged.sort((a, b) => {
+                const aMin = a.length ? a[0].order : Number.POSITIVE_INFINITY;
+                const bMin = b.length ? b[0].order : Number.POSITIVE_INFINITY;
+                return aMin - bMin;
+            });
+            return arranged.map(col => col.map(item => item.type));
+        };
+
         // ▼ 自動リセット＆振り返りナビ用ヘルパー ▼
-        const RESET_TYPES = ["daily", "weekly", "biweeklyA", "biweeklyB"];
-        const TYPE_LABELS = { daily: "日課", weekly: "週課", biweeklyA: "隔週（1日・15日）", biweeklyB: "隔週（10日・25日）" };
+        const RESET_TYPES = ["daily", "weekly", "biweeklyA", "biweeklyB"]; // 固定表示用（後方互換）。実際の自動リセット対象は getAutoResetTypes(data) で動的に求める
+        const TYPE_LABELS = { daily: "日課", weekly: "週課", biweeklyA: "隔週（1日・15日）", biweeklyB: "隔週（10日・25日）", monthly: "月課", monthly10: "月課（10日）", manual: "不定期" };
 
         // type ごとに「now 以前で最も新しい 6:00 のリセット時刻」を返す
         const mostRecentReset = (type, now) => {
@@ -253,6 +434,16 @@
                 d.setDate(d.getDate() - d.getDay()); // 直近の日曜 6:00
                 return d;
             }
+            if (type === "monthly") {
+                const d = new Date(now.getFullYear(), now.getMonth(), 1, 6, 0, 0, 0);
+                if (now < d) d.setMonth(d.getMonth() - 1);
+                return d;
+            }
+            if (type === "monthly10") {
+                const d = new Date(now.getFullYear(), now.getMonth(), 10, 6, 0, 0, 0);
+                if (now < d) d.setMonth(d.getMonth() - 1);
+                return d;
+            }
             const days = type === "biweeklyA" ? [1, 15] : [10, 25];
             let candidates = [];
             for (let off = -1; off <= 0; off++) {
@@ -264,23 +455,36 @@
         };
 
         // リセットを跨いでいたら、該当タイプのチェックを外し、未達成項目を char.review に記録する。
+        // 集計対象はキャラごとに「デフォルト12件＋そのキャラに表示されるカスタムタスク」に限定する（R1）。
         // lastResets が無い旧データは「今の期間のもの」として初期化するだけで、既存チェックは消さない（移行時のデータ消失防止）。
+        // 新タイプ（monthly）の lastResets も、未初期化なら mostRecentReset を初期値として入れるだけでチェックは消さない（R2）。
         const processResets = (inputData, now) => {
             const data = JSON.parse(JSON.stringify(inputData));
+            normalizeCustomData(data);
+            const autoTypes = getAutoResetTypes(data);
             if (!data.lastResets || typeof data.lastResets !== "object") {
                 data.lastResets = {};
-                RESET_TYPES.forEach(type => { data.lastResets[type] = mostRecentReset(type, now).getTime(); });
+                autoTypes.forEach(type => { data.lastResets[type] = mostRecentReset(type, now).getTime(); });
                 data.lastCheck = now.getTime();
                 return { data: data, changed: true, resetTypes: [], migrated: true };
             }
+            // 未初期化のタイプ（monthly 追加時など）は初期化のみ行い、その回のリセット判定には入れない。
+            // 初期化したら changed=true を返し、呼び出し側に保存させる（開きっぱなしで境界を跨いでもリセット判定できるように）
+            let initializedNewType = false;
+            autoTypes.forEach(type => {
+                if (data.lastResets[type] === undefined) {
+                    data.lastResets[type] = mostRecentReset(type, now).getTime();
+                    initializedNewType = true;
+                }
+            });
             let resetTypes = [];
-            RESET_TYPES.forEach(type => {
+            autoTypes.forEach(type => {
                 const mr = mostRecentReset(type, now).getTime();
                 const prev = data.lastResets[type] || 0;
                 if (mr > prev) {
                     resetTypes.push(type);
-                    const group = tasks.filter(task => task.type === type);
                     data.characters.forEach(char => {
+                        const group = visibleTasksFor(data, char).filter(task => task.type === type);
                         if (!char.tasks) char.tasks = {};
                         const missed = group.filter(task => !char.tasks[task.id]);
                         const done = group.filter(task => !!char.tasks[task.id]);
@@ -299,11 +503,11 @@
                 }
             });
             if (resetTypes.length > 0) data.lastCheck = now.getTime();
-            return { data: data, changed: resetTypes.length > 0, resetTypes: resetTypes, migrated: false };
+            return { data: data, changed: resetTypes.length > 0 || initializedNewType, resetTypes: resetTypes, migrated: false };
         };
 
         // 名称が修正されたアクセの、保存済み完成チェックを引き継ぐための移行
-        const ACC_RENAMES = [["神罰のゆびわ", "神智のゆびわ"], ["まもののこころ結晶", "まもののこころの結晶"]];
+        const ACC_RENAMES = [["神罰のゆびわ", "神智のゆびわ"], ["まもののこころ結晶", "まもののこころの結晶"], ["エステラ / ハクオウ / ユーライザのこころ", "異界のなかまのこころ（全17人）"]];
         const migrateAccNames = (dataObj) => {
             if (!dataObj || !dataObj.characters) return dataObj;
             dataObj.characters.forEach(c => {
@@ -320,11 +524,55 @@
             const [historyIndex, setHistoryIndex] = useState(-1);
             
             const [activeCharId, setActiveCharId] = useState(0);
-            const [timeNav, setTimeNav] = useState({ daily: "", weekly: "", biweeklyA: "", biweeklyB: "" });
+            const [timeNav, setTimeNav] = useState({ daily: "", weekly: "", biweeklyA: "", biweeklyB: "", monthly: "", monthly10: "" });
             const [modalInfo, setModalInfo] = useState(null);
             const [taskModalInfo, setTaskModalInfo] = useState(null);
             const [editingName, setEditingName] = useState(false);
             const [tempName, setTempName] = useState("");
+            const [showCustomPanel, setShowCustomPanel] = useState(false);
+            const [scopeTarget, setScopeTarget] = useState(null); // 反映範囲ダイアログ: { defId, mode: "active"|"all"|"select", selected: {charId: true} }
+            const [newTaskName, setNewTaskName] = useState("");
+            const [newTaskType, setNewTaskType] = useState("weekly");
+
+            // ▼ セクション配置の最適化（メイソンリー）用 ▼
+            const [columnCount, setColumnCount] = useState(() => sectionColumnCountForWidth(window.innerWidth));
+            const [measuredLayout, setMeasuredLayout] = useState(null); // { sig, columns } 実測ベースの配置
+            const [layoutTick, setLayoutTick] = useState(0); // リサイズ後の再実測トリガー（値自体は使わない）
+            const sectionCardRefs = useRef({}); // type -> セクションカードの DOM
+            const layoutInfoRef = useRef({ groups: [], columnCount: 1, sig: "" }); // 最新の表示セクションと列数
+
+            // リサイズで列数を更新する。同じ列数でも折り返しで高さが変わり得るため、再実測も促す。
+            useEffect(() => {
+                let timer = null;
+                const onResize = () => {
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        setColumnCount(sectionColumnCountForWidth(window.innerWidth));
+                        setLayoutTick(t => t + 1);
+                    }, 150);
+                };
+                window.addEventListener("resize", onResize);
+                const t0 = setTimeout(() => setLayoutTick(t => t + 1), 600); // 初期表示のフォント・スタイル確定後に再実測
+                return () => { window.removeEventListener("resize", onResize); if (timer) clearTimeout(timer); clearTimeout(t0); };
+            }, []);
+
+            // 描画後に各セクションカードの高さを実測し、配置が変わる場合だけ差し替える（無限ループ防止）。
+            // カード幅は列間で同一なので、再配置しても高さは変わらず配置は収束する。
+            useLayoutEffect(() => {
+                const info = layoutInfoRef.current;
+                if (!info.groups || info.groups.length === 0) return;
+                const items = [];
+                for (const g of info.groups) {
+                    const el = sectionCardRefs.current[g.type];
+                    if (!el) return;
+                    items.push({ type: g.type, height: el.offsetHeight + 24 }); // 24 = カード下マージン mb-6
+                }
+                const cols = distributeSections(items, info.columnCount);
+                setMeasuredLayout(prev => {
+                    if (prev && prev.sig === info.sig && JSON.stringify(prev.columns) === JSON.stringify(cols)) return prev;
+                    return { sig: info.sig, columns: cols };
+                });
+            });
 
             useEffect(() => {
                 const saved = localStorage.getItem("dqx_app_data_v2");
@@ -343,7 +591,7 @@
                     if (c.review === undefined) c.review = null;
                 });
                 // 読み込み時点でリセットを跨いでいたら自動リセット＋振り返りを記録（旧データは移行初期化のみ）
-                const result = processResets(migrateAccNames(parsed), new Date());
+                const result = processResets(migrateAccNames(normalizeCustomData(parsed)), new Date());
                 pushHistory(result.data);
                 updateCountdowns();
 
@@ -422,6 +670,12 @@
                     while (next.getDate() !== 1 && next.getDate() !== 15) next.setDate(next.getDate() + 1);
                 } else if (type === "biweeklyB") {
                     while (next.getDate() !== 10 && next.getDate() !== 25) next.setDate(next.getDate() + 1);
+                } else if (type === "monthly") {
+                    next = new Date(now.getFullYear(), now.getMonth(), 1, 6, 0, 0);
+                    if (now.getTime() >= next.getTime()) next.setMonth(next.getMonth() + 1);
+                } else if (type === "monthly10") {
+                    next = new Date(now.getFullYear(), now.getMonth(), 10, 6, 0, 0);
+                    if (now.getTime() >= next.getTime()) next.setMonth(next.getMonth() + 1);
                 }
                 return next;
             };
@@ -439,7 +693,9 @@
                     daily: format(getNextReset("daily")),
                     weekly: format(getNextReset("weekly")),
                     biweeklyA: format(getNextReset("biweeklyA")),
-                    biweeklyB: format(getNextReset("biweeklyB"))
+                    biweeklyB: format(getNextReset("biweeklyB")),
+                    monthly: format(getNextReset("monthly")),
+                    monthly10: format(getNextReset("monthly10"))
                 });
             };
 
@@ -455,6 +711,130 @@
                 const char = nextData.characters.find(c => c.id === activeCharId);
                 char.accs[accName] = !char.accs[accName];
                 pushHistory(nextData);
+            };
+
+            // ▼ カスタマイズ機能 v1：ライブラリ／カスタムタスクの操作 ▼
+            // 反映範囲の変更は customTasks の enabledFor だけを変え、各キャラの tasks・accs・review・uncompleted には触れない（R9・R10）。
+            // OFF にしてもチェック状態は char.tasks に残り、再ONで復活する。
+            const openScopeDialog = (def) => {
+                const selected = {};
+                data.characters.forEach(c => { selected[c.id] = isTaskEnabledFor(def, c.id, false); });
+                setScopeTarget({ defId: def.id, mode: def.enabledFor === "all" ? "all" : "select", selected: selected });
+            };
+
+            const applyScope = () => {
+                if (!scopeTarget) return;
+                const nextData = JSON.parse(JSON.stringify(data));
+                if (!Array.isArray(nextData.customTasks)) nextData.customTasks = [];
+                let def = nextData.customTasks.find(d => d.id === scopeTarget.defId);
+                if (!def) {
+                    const lib = LIBRARY_TASKS.find(l => l.id === scopeTarget.defId);
+                    if (!lib) { setScopeTarget(null); return; }
+                    def = { id: lib.id, name: lib.name, type: lib.type, ver: lib.ver, place: lib.place, desc: lib.desc, origin: "library", enabledFor: [], applyToNewChars: true };
+                    nextData.customTasks.push(def);
+                }
+                if (scopeTarget.mode === "all") {
+                    def.enabledFor = "all";
+                    def.applyToNewChars = true;
+                } else if (scopeTarget.mode === "active") {
+                    const ids = Array.isArray(def.enabledFor) ? def.enabledFor.slice() : [];
+                    if (ids.indexOf(activeCharId) < 0) ids.push(activeCharId);
+                    def.enabledFor = ids;
+                    def.applyToNewChars = false;
+                } else {
+                    def.enabledFor = nextData.characters.filter(c => scopeTarget.selected[c.id]).map(c => c.id);
+                    def.applyToNewChars = false;
+                }
+                // 表示対象が誰もいなくなったライブラリ項目は、定義ごと取り除く（完全なOFF）
+                if (def.origin === "library" && Array.isArray(def.enabledFor) && def.enabledFor.length === 0) {
+                    nextData.customTasks = nextData.customTasks.filter(d => d.id !== def.id);
+                }
+                pushHistory(nextData);
+                setScopeTarget(null);
+            };
+
+            // ▼ カスタマイズ機能：一括追加・一括削除（反映範囲ダイアログを bulk 種別で共用する） ▼
+            const openBulkAddDialog = () => {
+                const selected = {};
+                data.characters.forEach(c => { selected[c.id] = false; });
+                setScopeTarget({ bulk: "add", mode: "active", selected: selected });
+            };
+
+            const openBulkRemoveDialog = () => {
+                const selected = {};
+                data.characters.forEach(c => { selected[c.id] = false; });
+                setScopeTarget({ bulk: "remove", mode: "active", selected: selected });
+            };
+
+            // 一括操作は pushHistory を1回だけ呼ぶ（Undo 1回で一括操作全体を戻せる）。
+            // 一括削除は実行前に、対象件数入りの window.confirm を出す。
+            const applyBulkScope = () => {
+                if (!scopeTarget || !scopeTarget.bulk) return;
+                const selectedIds = data.characters.filter(c => scopeTarget.selected[c.id]).map(c => c.id);
+                if (scopeTarget.bulk === "add") {
+                    pushHistory(bulkAddLibrary(data, scopeTarget.mode, activeCharId, selectedIds));
+                    setScopeTarget(null);
+                    return;
+                }
+                const mode = scopeTarget.mode;
+                const defs = data.customTasks || [];
+                let count, msg;
+                if (mode === "all") {
+                    count = defs.length;
+                    msg = `追加コンテンツ全 ${count} 件を、全キャラから完全に削除しますか？（振り返り記録からも消えます）`;
+                } else {
+                    const targets = mode === "active" ? [activeCharId] : selectedIds;
+                    count = defs.filter(def => targets.some(id => isTaskEnabledFor(def, id, false))).length;
+                    msg = `追加コンテンツ ${count} 件を${mode === "active" ? `「${activeChar.name}」` : "選択したキャラ"}から外しますか？（チェック状態は残ります）`;
+                }
+                if (count === 0) { setScopeTarget(null); return; }
+                if (!window.confirm(msg)) return;
+                pushHistory(bulkRemoveContent(data, mode, activeCharId, selectedIds));
+                setScopeTarget(null);
+            };
+
+            const turnOffTask = (defId) => {
+                const nextData = JSON.parse(JSON.stringify(data));
+                if (!Array.isArray(nextData.customTasks)) nextData.customTasks = [];
+                const def = nextData.customTasks.find(d => d.id === defId);
+                if (!def) return;
+                if (def.enabledFor === "all") {
+                    def.enabledFor = nextData.characters.filter(c => c.id !== activeCharId).map(c => c.id);
+                    def.applyToNewChars = false;
+                } else if (Array.isArray(def.enabledFor)) {
+                    def.enabledFor = def.enabledFor.filter(id => id !== activeCharId);
+                }
+                if (def.origin === "library" && Array.isArray(def.enabledFor) && def.enabledFor.length === 0) {
+                    nextData.customTasks = nextData.customTasks.filter(d => d.id !== def.id);
+                }
+                pushHistory(nextData);
+            };
+
+            const deleteCustomTask = (def) => {
+                if (!window.confirm(`「${def.name}」を削除しますか？（全キャラの振り返り記録からも消えます）`)) return;
+                const nextData = JSON.parse(JSON.stringify(data));
+                nextData.customTasks = (nextData.customTasks || []).filter(d => d.id !== def.id);
+                // 削除したタスクは全キャラの振り返り・未達成リストからも除去する（Q4決定）。char.tasks の孤児キーは残してよい
+                nextData.characters.forEach(c => {
+                    if (c.review && Array.isArray(c.review.items)) {
+                        c.review = Object.assign({}, c.review, { items: c.review.items.filter(i => i.id !== def.id) });
+                    }
+                    if (Array.isArray(c.uncompleted)) c.uncompleted = c.uncompleted.filter(i => i.id !== def.id);
+                });
+                pushHistory(nextData);
+            };
+
+            const addCustomTask = () => {
+                const name = newTaskName.trim();
+                if (!name) { alert("タスク名を入力してください。"); return; }
+                const customs = (data.customTasks || []).filter(d => d.origin === "custom");
+                if (customs.length >= CUSTOM_TASK_LIMIT) { alert(`自由入力のカスタムタスクは最大${CUSTOM_TASK_LIMIT}件までです。`); return; }
+                const nextData = JSON.parse(JSON.stringify(data));
+                if (!Array.isArray(nextData.customTasks)) nextData.customTasks = [];
+                const id = "custom-" + Date.now() + "-" + Math.floor(Math.random() * 1000000000);
+                nextData.customTasks.push({ id: id, name: name, type: newTaskType, ver: "—", place: "自由入力のカスタムタスク", desc: "自分で追加したカスタムタスクです。", origin: "custom", enabledFor: [activeCharId], applyToNewChars: false });
+                pushHistory(nextData);
+                setNewTaskName("");
             };
 
             const addCharacter = () => {
@@ -484,6 +864,12 @@
                 
                 const nextData = JSON.parse(JSON.stringify(data));
                 nextData.characters = nextData.characters.filter(c => c.id !== activeCharId);
+                // 削除したキャラのIDを、カスタムタスクの反映範囲（enabledFor）からも除去する
+                if (Array.isArray(nextData.customTasks)) {
+                    nextData.customTasks.forEach(def => {
+                        if (Array.isArray(def.enabledFor)) def.enabledFor = def.enabledFor.filter(id => id !== activeCharId);
+                    });
+                }
                 pushHistory(nextData);
                 setActiveCharId(nextData.characters[0].id);
             };
@@ -512,7 +898,7 @@
                                 if (!c.uncompleted) c.uncompleted = [];
                                 if (c.review === undefined) c.review = null;
                             });
-                            const result = processResets(migrateAccNames(parsed), new Date());
+                            const result = processResets(migrateAccNames(normalizeCustomData(parsed)), new Date());
                             pushHistory(result.data);
                             setActiveCharId(parsed.characters[0].id);
                             alert("データを復元しました！");
@@ -530,9 +916,60 @@
             const reviewDone = (review && review.doneByType) ? Object.values(review.doneByType).reduce((a, b) => a + b, 0) : 0;
             const reviewTotal = (review && review.totalByType) ? Object.values(review.totalByType).reduce((a, b) => a + b, 0) : 0;
             const otherReviewChars = data.characters.filter(c => c.id !== activeChar.id && c.review);
+            const visibleTasks = visibleTasksFor(data, activeChar);
+            const customCount = (data.customTasks || []).filter(d => d.origin === "custom").length;
+            const libraryCount = (data.customTasks || []).filter(d => d.origin === "library").length;
+            const totalAddedCount = (data.customTasks || []).length;
+            const reviewTypes = CUSTOM_TASK_TYPES.filter(t => review && ((review.items && review.items.some(i => i.type === t)) || (review.doneByType && review.doneByType[t] !== undefined)));
+
+            // ▼ タスクセクションの配置（高さ実測で空白を最小化するメイソンリー配置） ▼
+            const SECTION_DEFS = [
+                { title: "日課", type: "daily", time: timeNav.daily, color: "text-blue-600" },
+                { title: "週課 (日曜6時更新)", type: "weekly", time: timeNav.weekly, color: "text-purple-600" },
+                { title: "隔週 (1日・15日更新)", type: "biweeklyA", time: timeNav.biweeklyA, color: "text-pink-600" },
+                { title: "隔週 (10日・25日更新)", type: "biweeklyB", time: timeNav.biweeklyB, color: "text-orange-600" },
+                { title: "月課 (毎月1日6時更新)", type: "monthly", time: timeNav.monthly, color: "text-teal-600" },
+                { title: "月課 (毎月10日6時更新)", type: "monthly10", time: timeNav.monthly10, color: "text-teal-600" },
+                { title: "不定期 (手動チェック)", type: "manual", time: null, color: "text-gray-600" }
+            ];
+            const sectionGroups = SECTION_DEFS.filter(group => group.type === "daily" || group.type === "weekly" || group.type === "biweeklyA" || group.type === "biweeklyB" || visibleTasks.some(t => t.type === group.type));
+            const sectionSig = columnCount + ":" + sectionGroups.map(g => g.type).join(",");
+            const estimateSectionHeight = (type) => 116 + visibleTasks.filter(t => t.type === type).length * 52 + 24; // ヘッダー等＋行高×件数＋下マージンの目安
+            const estimatedColumns = distributeSections(sectionGroups.map(g => ({ type: g.type, height: estimateSectionHeight(g.type) })), columnCount);
+            const activeColumns = (measuredLayout && measuredLayout.sig === sectionSig) ? measuredLayout.columns : estimatedColumns;
+            layoutInfoRef.current = { groups: sectionGroups, columnCount: columnCount, sig: sectionSig };
+
+            const renderSectionCard = (group) => {
+                const groupTasks = visibleTasks.filter(t => t.type === group.type);
+                const uncompletedCount = groupTasks.filter(t => !activeChar.tasks[t.id]).length;
+                return (
+                    <div key={group.type} ref={el => { sectionCardRefs.current[group.type] = el; }} className="glass p-5 rounded-xl mb-6">
+                        <div className="flex justify-between items-end mb-4 border-b pb-2">
+                            <h2 className={`text-xl font-bold ${group.color}`}>{group.title}</h2>
+                            <div className="text-right">
+                                {group.time !== null && (<div className="text-xs text-gray-500">リセットまで: <span className="font-bold text-red-500">{group.time}</span></div>)}
+                                <div className="text-sm font-bold mt-1">未達成: <span className="text-red-600 text-lg">{uncompletedCount}</span> 件</div>
+                            </div>
+                        </div>
+                        <ul className="space-y-3">
+                            {groupTasks.map(task => (
+                                <li key={task.id} className={`flex items-center gap-3 p-2 rounded transition-colors ${activeChar.tasks[task.id] ? 'bg-gray-100/50 opacity-60' : 'hover:bg-white'}`}>
+                                    <input type="checkbox" className="w-5 h-5 accent-pink-500 cursor-pointer"
+                                        checked={!!activeChar.tasks[task.id]} onChange={() => toggleTask(task.id)} />
+                                    <span className={`flex-1 cursor-pointer hover:text-blue-600 ${activeChar.tasks[task.id] ? 'text-gray-500 line-through' : 'font-bold text-gray-700'}`}
+                                          onClick={() => setTaskModalInfo(task)} title="クリックしてやり方を見る">
+                                        {task.name} <span className="text-xs text-blue-400 bg-blue-50 rounded-full w-4 h-4 inline-flex items-center justify-center font-bold ml-1">i</span>
+                                    </span>
+                                    <span className="text-xs bg-white border text-gray-500 px-2 py-1 rounded-full shadow-sm font-mono">Ver {task.ver}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            };
 
             return (
-                <div className="p-4 max-w-5xl mx-auto pb-20">
+                <div className="w-full max-w-[2000px] mx-auto px-3 sm:px-5 xl:px-8 pt-4 pb-20">
                     {/* ヘッダーエリア */}
                     <header className="glass p-5 rounded-xl mb-6 flex flex-col lg:flex-row justify-between items-center gap-4">
                         <div className="flex flex-col items-center lg:items-start">
@@ -594,7 +1031,7 @@
                             {review.items && review.items.length > 0 ? (
                                 <div className="space-y-2">
                                     <p className="text-sm font-bold text-red-500">未達成だった項目はこちらです（次の期間でがんばろう！）</p>
-                                    {RESET_TYPES.map(type => {
+                                    {reviewTypes.map(type => {
                                         const items = review.items.filter(i => i.type === type);
                                         if (items.length === 0) return null;
                                         return (
@@ -614,48 +1051,98 @@
                         </div>
                     )}
 
-                    {/* タスクセクション */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {[
-                            { title: "日課", type: "daily", time: timeNav.daily, color: "text-blue-600" },
-                            { title: "週課 (日曜6時更新)", type: "weekly", time: timeNav.weekly, color: "text-purple-600" },
-                            { title: "隔週 (1日・15日更新)", type: "biweeklyA", time: timeNav.biweeklyA, color: "text-pink-600" },
-                            { title: "隔週 (10日・25日更新)", type: "biweeklyB", time: timeNav.biweeklyB, color: "text-orange-600" }
-                        ].map(group => {
-                            const groupTasks = tasks.filter(t => t.type === group.type);
-                            const uncompletedCount = groupTasks.filter(t => !activeChar.tasks[t.id]).length;
-                            
-                            return (
-                                <div key={group.type} className="glass p-5 rounded-xl">
-                                    <div className="flex justify-between items-end mb-4 border-b pb-2">
-                                        <h2 className={`text-xl font-bold ${group.color}`}>{group.title}</h2>
-                                        <div className="text-right">
-                                            <div className="text-xs text-gray-500">リセットまで: <span className="font-bold text-red-500">{group.time}</span></div>
-                                            <div className="text-sm font-bold mt-1">未達成: <span className="text-red-600 text-lg">{uncompletedCount}</span> 件</div>
-                                        </div>
+                    {/* タスクセクション（高さ実測で配置を最適化するメイソンリー配置） */}
+                    <div className="flex gap-6 mb-8 items-start">
+                        {activeColumns.map((colTypes, ci) => (
+                            <div key={ci} className="flex-1 min-w-0 flex flex-col">
+                                {colTypes.map(type => {
+                                    const group = sectionGroups.find(g => g.type === type);
+                                    return group ? renderSectionCard(group) : null;
+                                })}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* カスタマイズ（追加コンテンツ＆自由入力タスク） */}
+                    <div className="glass p-5 rounded-xl mb-8">
+                        <div className="flex justify-between items-center border-b pb-2 mb-3">
+                            <h2 className="text-xl font-bold text-indigo-600">🧩 カスタマイズ（追加コンテンツ）</h2>
+                            <button onClick={() => setShowCustomPanel(!showCustomPanel)} className="bg-indigo-400 text-white px-3 py-1 rounded shadow hover:bg-indigo-500 text-sm font-bold">{showCustomPanel ? "閉じる" : "開く"}</button>
+                        </div>
+                        {showCustomPanel && (
+                            <div>
+                                <p className="text-xs text-gray-500 mb-4">デフォルトの12件は全キャラに常時表示されます。ここで追加したコンテンツは、選んだキャラにだけ表示されます。チェック状態はキャラごとに別々に記録されます。</p>
+
+                                <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 mb-6">
+                                    <h3 className="font-bold text-gray-700 mb-1">🔁 一括操作</h3>
+                                    <p className="text-xs text-gray-500 mb-2">現在の追加状況：ライブラリ追加済み {libraryCount} / {LIBRARY_TASKS.length} 件・カスタム {customCount} 件</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button onClick={openBulkAddDialog} className="text-sm bg-indigo-400 text-white px-3 py-2 rounded shadow font-bold hover:bg-indigo-500">ライブラリを一括追加</button>
+                                        <button onClick={openBulkRemoveDialog} disabled={totalAddedCount === 0} className={`text-sm px-3 py-2 rounded shadow font-bold ${totalAddedCount === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-400 text-white hover:bg-red-500'}`}>追加コンテンツを一括削除</button>
                                     </div>
-                                    <ul className="space-y-3">
-                                        {groupTasks.map(task => (
-                                            <li key={task.id} className={`flex items-center gap-3 p-2 rounded transition-colors ${activeChar.tasks[task.id] ? 'bg-gray-100/50 opacity-60' : 'hover:bg-white'}`}>
-                                                <input type="checkbox" className="w-5 h-5 accent-pink-500 cursor-pointer"
-                                                    checked={!!activeChar.tasks[task.id]} onChange={() => toggleTask(task.id)} />
-                                                <span className={`flex-1 cursor-pointer hover:text-blue-600 ${activeChar.tasks[task.id] ? 'text-gray-500 line-through' : 'font-bold text-gray-700'}`}
-                                                      onClick={() => setTaskModalInfo(task)} title="クリックしてやり方を見る">
-                                                    {task.name} <span className="text-xs text-blue-400 bg-blue-50 rounded-full w-4 h-4 inline-flex items-center justify-center font-bold ml-1">i</span>
-                                                </span>
-                                                <span className="text-xs bg-white border text-gray-500 px-2 py-1 rounded-full shadow-sm font-mono">Ver {task.ver}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
-                            )
-                        })}
+
+                                <h3 className="font-bold text-gray-700 mb-2">📚 ライブラリから追加</h3>
+                                <ul className="space-y-2 mb-6">
+                                    {LIBRARY_TASKS.map(lib => {
+                                        const def = (data.customTasks || []).find(d => d.id === lib.id) || null;
+                                        const on = def ? isTaskEnabledFor(def, activeChar.id, false) : false;
+                                        return (
+                                            <li key={lib.id} className="flex flex-wrap items-center gap-2 bg-white/60 rounded-lg p-2 border border-indigo-100">
+                                                <span className="text-xs font-bold bg-indigo-400 text-white px-2 py-0.5 rounded">{TYPE_LABELS[lib.type]}</span>
+                                                <span className="font-bold text-gray-700 flex-1 cursor-pointer hover:text-blue-600" onClick={() => setTaskModalInfo(lib)} title="クリックしてやり方を見る">{lib.name}</span>
+                                                {on ? (
+                                                    <span className="flex gap-1">
+                                                        <button onClick={() => openScopeDialog(def)} className="text-xs bg-white border border-indigo-300 text-indigo-600 px-2 py-1 rounded shadow-sm font-bold">反映範囲を変更</button>
+                                                        <button onClick={() => turnOffTask(lib.id)} className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shadow-sm font-bold">このキャラでOFF</button>
+                                                    </span>
+                                                ) : (
+                                                    <button onClick={() => openScopeDialog(def || lib)} className="text-xs bg-indigo-400 text-white px-3 py-1 rounded shadow font-bold">追加する</button>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+
+                                <h3 className="font-bold text-gray-700 mb-2">✏️ 自由入力のカスタムタスク（{customCount} / {CUSTOM_TASK_LIMIT} 件）</h3>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    <input type="text" className="p-2 border rounded flex-1 bg-white/80" style={{minWidth: "180px"}} placeholder="タスク名（例：おでかけすごろく）" value={newTaskName} onChange={e => setNewTaskName(e.target.value)} disabled={customCount >= CUSTOM_TASK_LIMIT} />
+                                    <select className="p-2 border rounded bg-white/80" value={newTaskType} onChange={e => setNewTaskType(e.target.value)} disabled={customCount >= CUSTOM_TASK_LIMIT}>
+                                        {CUSTOM_TASK_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+                                    </select>
+                                    <button onClick={addCustomTask} disabled={customCount >= CUSTOM_TASK_LIMIT} className={`px-3 py-2 rounded shadow text-sm font-bold ${customCount >= CUSTOM_TASK_LIMIT ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-pink-400 text-white hover:bg-pink-500'}`}>追加</button>
+                                </div>
+                                {customCount >= CUSTOM_TASK_LIMIT && (
+                                    <p className="text-xs text-red-500 font-bold mb-3">上限（{CUSTOM_TASK_LIMIT}件）に達したため、これ以上追加できません。不要なカスタムタスクを削除してください。</p>
+                                )}
+                                <ul className="space-y-2">
+                                    {(data.customTasks || []).filter(d => d.origin === "custom").map(def => {
+                                        const on = isTaskEnabledFor(def, activeChar.id, false);
+                                        return (
+                                            <li key={def.id} className="flex flex-wrap items-center gap-2 bg-white/60 rounded-lg p-2 border border-pink-100">
+                                                <span className="text-xs font-bold bg-pink-400 text-white px-2 py-0.5 rounded">{TYPE_LABELS[def.type]}</span>
+                                                <span className="font-bold text-gray-700 flex-1">{def.name}</span>
+                                                {on ? (
+                                                    <span className="flex gap-1">
+                                                        <button onClick={() => openScopeDialog(def)} className="text-xs bg-white border border-pink-300 text-pink-600 px-2 py-1 rounded shadow-sm font-bold">反映範囲を変更</button>
+                                                        <button onClick={() => turnOffTask(def.id)} className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shadow-sm font-bold">このキャラでOFF</button>
+                                                    </span>
+                                                ) : (
+                                                    <button onClick={() => openScopeDialog(def)} className="text-xs bg-pink-400 text-white px-3 py-1 rounded shadow font-bold">追加する</button>
+                                                )}
+                                                <button onClick={() => deleteCustomTask(def)} className="text-xs bg-red-100 text-red-500 px-2 py-1 rounded shadow-sm font-bold">削除</button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        )}
                     </div>
 
                     {/* アクセサリー伝承ツリー */}
                     <div className="glass p-6 rounded-xl">
                         <h2 className="text-2xl font-bold text-blue-600 mb-6">👑 アクセサリー伝承ツリー＆完成チェック</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                             {accTrees.map(tree => (
                                 <div key={tree.part} className="border p-4 rounded-lg bg-white bg-opacity-60 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-2 h-full bg-pink-300"></div>
@@ -709,6 +1196,52 @@
                             </div>
                         </div>
                     )}
+
+                    {/* 反映範囲ダイアログ */}
+                    {scopeTarget && (() => {
+                        const isBulk = !!scopeTarget.bulk;
+                        const def = isBulk ? null : ((data.customTasks || []).find(d => d.id === scopeTarget.defId) || LIBRARY_TASKS.find(l => l.id === scopeTarget.defId));
+                        if (!isBulk && !def) return null;
+                        return (
+                            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                                 onClick={(e) => { if (e.target === e.currentTarget) setScopeTarget(null); }}>
+                                <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+                                    <button className="absolute top-3 right-4 text-gray-400 hover:text-red-500 font-bold text-2xl" onClick={() => setScopeTarget(null)}>×</button>
+                                    <h3 className="text-lg font-bold text-indigo-700 mb-1 pr-8">{isBulk ? (scopeTarget.bulk === "add" ? "📚 ライブラリを一括追加" : "🗑 追加コンテンツを一括削除") : `「${def.name}」の反映範囲`}</h3>
+                                    <p className="text-xs text-gray-500 mb-4">{isBulk ? (scopeTarget.bulk === "add" ? `ライブラリ全${LIBRARY_TASKS.length}件を、選んだ範囲でまとめて追加します。ほかのキャラのチェック状態には影響しません。` : "追加コンテンツ（ライブラリ＋自由入力）をまとめて外します。「全キャラから完全に削除」以外では、チェック状態は残ります。") : "表示するキャラを選んでください。ほかのキャラのチェック状態には影響しません。"}</p>
+                                    <div className="space-y-2 mb-4">
+                                        <label className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-2 cursor-pointer">
+                                            <input type="radio" name="scopeMode" checked={scopeTarget.mode === "active"} onChange={() => setScopeTarget(Object.assign({}, scopeTarget, { mode: "active" }))} />
+                                            <span className="text-sm font-bold text-gray-700">{isBulk && scopeTarget.bulk === "remove" ? `このキャラから外す（${activeChar.name}）` : `このキャラのみ（${activeChar.name}）`}</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-2 cursor-pointer">
+                                            <input type="radio" name="scopeMode" checked={scopeTarget.mode === "all"} onChange={() => setScopeTarget(Object.assign({}, scopeTarget, { mode: "all" }))} />
+                                            <span className="text-sm font-bold text-gray-700">{isBulk && scopeTarget.bulk === "remove" ? "全キャラから完全に削除" : "全キャラ（新しく作るキャラにも表示）"}</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg p-2 cursor-pointer">
+                                            <input type="radio" name="scopeMode" checked={scopeTarget.mode === "select"} onChange={() => setScopeTarget(Object.assign({}, scopeTarget, { mode: "select" }))} />
+                                            <span className="text-sm font-bold text-gray-700">{isBulk && scopeTarget.bulk === "remove" ? "キャラを選択して外す" : "キャラを選択して反映"}</span>
+                                        </label>
+                                    </div>
+                                    {scopeTarget.mode === "select" && (
+                                        <div className="space-y-1 mb-4 max-h-48 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                                            {data.characters.map(c => (
+                                                <label key={c.id} className="flex items-center gap-2 p-1 cursor-pointer">
+                                                    <input type="checkbox" className="w-4 h-4 accent-indigo-500" checked={!!scopeTarget.selected[c.id]}
+                                                        onChange={() => { const sel = Object.assign({}, scopeTarget.selected); sel[c.id] = !sel[c.id]; setScopeTarget(Object.assign({}, scopeTarget, { selected: sel })); }} />
+                                                    <span className="text-sm font-bold text-gray-700">{c.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 justify-end">
+                                        <button onClick={() => setScopeTarget(null)} className="px-3 py-2 rounded bg-gray-200 text-gray-600 text-sm font-bold">キャンセル</button>
+                                        <button onClick={isBulk ? applyBulkScope : applyScope} className={`px-4 py-2 rounded text-white text-sm font-bold shadow ${isBulk && scopeTarget.bulk === "remove" ? 'bg-red-400 hover:bg-red-500' : 'bg-indigo-400 hover:bg-indigo-500'}`}>{isBulk ? (scopeTarget.bulk === "add" ? "一括追加する" : "一括削除する") : "反映する"}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* タスク解説モーダル */}
                     {taskModalInfo && (
